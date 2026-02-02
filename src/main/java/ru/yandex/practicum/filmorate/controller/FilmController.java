@@ -15,7 +15,7 @@ import java.util.HashMap;
 @RequestMapping("/films")
 public class FilmController {
     private static final Logger log = LoggerFactory.getLogger(FilmController.class);
-    HashMap<Long, Film> films = new HashMap<>();
+    private final HashMap<Long, Film> films = new HashMap<>();
 
     @GetMapping
     public Collection<Film> getFilms() {
