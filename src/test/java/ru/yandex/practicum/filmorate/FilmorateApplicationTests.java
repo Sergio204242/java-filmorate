@@ -2,9 +2,11 @@ package ru.yandex.practicum.filmorate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.controller.UserController;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
@@ -16,17 +18,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 class FilmorateApplicationTests {
-    private FilmController filmController;
-    private UserController userController;
 
-    @Test
-    void contextLoads() {
-    }
+    @Autowired
+    private FilmController filmController;
+
+    @Autowired
+    private UserController userController;
 
     @BeforeEach
     void setUp() {
-        filmController = new FilmController();
-        userController = new UserController();
+        filmController.getFilms().clear(); // или метод clear() в Storage
+        userController.getUsers().clear();
+    }
+
+    @Test
+    void contextLoads() {
     }
 
     @Test
@@ -51,7 +57,8 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(1800, 3, 27));
 
-        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.create(film));
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> filmController.create(film));
 
         assertEquals("Дата релиза должна быть не раньше 28 декабря 1895", exception.getMessage());
     }
@@ -75,7 +82,7 @@ class FilmorateApplicationTests {
 
         Film updatedFilm = filmController.update(film1);
 
-        assertEquals(film, updatedFilm);
+        assertEquals(film1, updatedFilm);
     }
 
     @Test
@@ -95,7 +102,8 @@ class FilmorateApplicationTests {
         film1.setDuration(260);
         film1.setReleaseDate(LocalDate.of(1800, 4, 14));
 
-        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.update(film1));
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> filmController.update(film1));
 
         assertEquals("Дата релиза должна быть не раньше 28 декабря 1895", exception.getMessage());
     }
@@ -109,9 +117,10 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(2004, 3, 27));
 
-        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.update(film));
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> filmController.update(film));
 
-        assertEquals("Фильм с таким id не существует", exception.getMessage());
+        assertEquals("фильм с таким id не найден", exception.getMessage());
     }
 
     @Test
@@ -171,7 +180,8 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(2004, 3, 27));
         user.setEmail("learningjava@gmail.com");
 
-        ValidationException exception = assertThrows(ValidationException.class, () -> userController.update(user));
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userController.update(user));
 
         assertEquals("Пользователь с таким id не существует", exception.getMessage());
     }
