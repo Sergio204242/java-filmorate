@@ -4,17 +4,19 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Film.
  */
-@Getter
-@Setter
+@Data
 public class Film {
+    private final Set<Long> likes = new HashSet<>();
+
     private long id;
 
     @NotBlank
@@ -29,4 +31,8 @@ public class Film {
 
     @Positive
     private int duration;
+
+    public int getLikesCount() {
+        return likes.size();
+    }
 }
