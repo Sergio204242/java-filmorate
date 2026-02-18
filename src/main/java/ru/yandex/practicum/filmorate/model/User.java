@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Data
 public class User {
-    private final Set<Long> friends = new HashSet<>();
+    private final Set<Integer> friends = new HashSet<>();
 
     private long id;
 

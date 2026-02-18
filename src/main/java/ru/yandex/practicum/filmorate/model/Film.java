@@ -15,12 +15,13 @@ import java.util.Set;
  */
 @Data
 public class Film {
-    private final Set<Long> likes = new HashSet<>();
+
+    private Set<Long> likes = new HashSet<>();
 
     private long id;
 
-    @NotBlank
     @NotNull
+    @NotBlank
     private String name;
 
     @Size(max = 200)
@@ -31,6 +32,10 @@ public class Film {
 
     @Positive
     private int duration;
+
+    private Mpa mpa;
+
+    private Set<Genre> genres = new HashSet<>();
 
     public int getLikesCount() {
         return likes.size();
