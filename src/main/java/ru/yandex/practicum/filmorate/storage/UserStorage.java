@@ -12,7 +12,7 @@ public interface UserStorage {
 
     UserDto update(User user);
 
-    UserDto getUserById(long user_id);
+    UserDto getUserById(long userId);
 
     Collection<UserDto> getUsers();
 
