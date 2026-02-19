@@ -1,39 +1,38 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
+import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import ru.yandex.practicum.filmorate.controller.FilmController;
-import ru.yandex.practicum.filmorate.controller.UserController;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.exception.DateException;
+import ru.yandex.practicum.filmorate.mapper.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.dto.FilmDto;
+import ru.yandex.practicum.filmorate.model.dto.UserDto;
+import ru.yandex.practicum.filmorate.storage.FilmDbStorage;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.UserDbStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
+@JdbcTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Import({FilmDbStorage.class, UserDbStorage.class, FilmRowMapper.class, GenreRowMapper.class, MpaRowMapper.class,
+        UserRowMapper.class, FilmExtractor.class})
 class FilmorateApplicationTests {
 
-    @Autowired
-    private FilmController filmController;
-
-    @Autowired
-    private UserController userController;
-
-    @BeforeEach
-    void setUp() {
-        filmController.getFilms().clear(); // или метод clear() в Storage
-        userController.getUsers().clear();
-    }
-
-    @Test
-    void contextLoads() {
-    }
+    private final UserStorage userStorage;
+    private final FilmStorage filmStorage;
 
     @Test
     void createFilm() {
@@ -43,10 +42,11 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(2004, 3, 27));
 
-        Film createdFilm = filmController.create(film);
+        FilmDto createdFilm = filmStorage.create(film);
+        film.setId(createdFilm.getId());
 
-        assertEquals(film, createdFilm);
-        assertEquals(1, filmController.getFilms().size());
+        assertEquals(FilmMapper.mapToFilmDto(film), createdFilm);
+        assertEquals(1, filmStorage.getFilms().size());
     }
 
     @Test
@@ -57,8 +57,8 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(1800, 3, 27));
 
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.create(film));
+        DateException exception = assertThrows(DateException.class,
+                () -> filmStorage.create(film));
 
         assertEquals("Дата релиза должна быть не раньше 28 декабря 1895", exception.getMessage());
     }
@@ -71,7 +71,7 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(2004, 3, 27));
 
-        Film createdFilm = filmController.create(film);
+        FilmDto createdFilm = filmStorage.create(film);
 
         Film film1 = new Film();
         film1.setId(film.getId());
@@ -79,10 +79,10 @@ class FilmorateApplicationTests {
         film1.setDescription("Fantastica");
         film1.setDuration(260);
         film1.setReleaseDate(LocalDate.of(2014, 4, 14));
+        film1.setMpa(new Mpa(1, "G"));
+        FilmDto updatedFilm = filmStorage.update(film1);
 
-        Film updatedFilm = filmController.update(film1);
-
-        assertEquals(film1, updatedFilm);
+        assertEquals(FilmMapper.mapToFilmDto(film1), updatedFilm);
     }
 
     @Test
@@ -93,7 +93,7 @@ class FilmorateApplicationTests {
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(2004, 3, 27));
 
-        Film createdFilm = filmController.create(film);
+        FilmDto createdFilm = filmStorage.create(film);
 
         Film film1 = new Film();
         film1.setId(film.getId());
@@ -101,9 +101,10 @@ class FilmorateApplicationTests {
         film1.setDescription("Fantastica");
         film1.setDuration(260);
         film1.setReleaseDate(LocalDate.of(1800, 4, 14));
+        film1.setMpa(new Mpa(1, "G"));
 
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.update(film1));
+        DateException exception = assertThrows(DateException.class,
+                () -> filmStorage.update(film1));
 
         assertEquals("Дата релиза должна быть не раньше 28 декабря 1895", exception.getMessage());
     }
@@ -116,11 +117,12 @@ class FilmorateApplicationTests {
         film.setDescription("Drama");
         film.setDuration(120);
         film.setReleaseDate(LocalDate.of(2004, 3, 27));
+        film.setMpa(new Mpa(1, "G"));
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> filmController.update(film));
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> filmStorage.update(film));
 
-        assertEquals("фильм с таким id не найден", exception.getMessage());
+        assertEquals("Фильм с id = 86 не найден", exception.getMessage());
     }
 
     @Test
@@ -131,10 +133,11 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(2004, 3, 27));
         user.setEmail("learningjava@gmail.com");
 
-        User createdUser = userController.create(user);
+        UserDto createdUser = userStorage.create(user);
+        user.setId(createdUser.getId());
 
-        assertEquals(user, createdUser);
-        assertEquals(1, userController.getUsers().size());
+        assertEquals(UserMapper.mapToUserDto(user), createdUser);
+        assertEquals(1, userStorage.getUsers().size());
     }
 
     @Test
@@ -144,9 +147,10 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(2004, 3, 27));
         user.setEmail("learningjava@gmail.com");
 
-        User createdUser = userController.create(user);
+        UserDto createdUser = userStorage.create(user);
+        user.setId(createdUser.getId());
 
-        assertEquals(user, createdUser);
+        assertEquals(UserMapper.mapToUserDto(user), createdUser);
     }
 
     @Test
@@ -157,18 +161,18 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(2004, 3, 27));
         user.setEmail("learningjava@gmail.com");
 
-        User createdUser = userController.create(user);
+        UserDto createdUser = userStorage.create(user);
 
         User user1 = new User();
-        user1.setId(user.getId());
+        user1.setId(createdUser.getId());
         user1.setLogin("Dimas777");
         user1.setName("Dima");
         user1.setBirthday(LocalDate.of(2002, 3, 27));
         user1.setEmail("learningjava777@gmail.com");
 
-        User updatedUser = userController.update(user1);
+        UserDto updatedUser = userStorage.update(user1);
 
-        assertEquals(user1, updatedUser);
+        assertEquals(UserMapper.mapToUserDto(user1), updatedUser);
     }
 
     @Test
@@ -180,9 +184,9 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(2004, 3, 27));
         user.setEmail("learningjava@gmail.com");
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userController.update(user));
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> userStorage.update(user));
 
-        assertEquals("Пользователь с таким id не существует", exception.getMessage());
+        assertEquals("Пользователь с id = 3 не найден", exception.getMessage());
     }
 }
