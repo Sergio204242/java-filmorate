@@ -224,8 +224,8 @@ public class FilmDbStorage implements FilmStorage {
 
         List<Film> films = jdbcTemplate.query(selectSql, filmExtractor, count);
 
-        return films.stream().
-                map(FilmMapper::mapToFilmDto)
+        return films.stream()
+                .map(FilmMapper::mapToFilmDto)
                 .sorted(Comparator.comparingInt(FilmDto::getCountLikes).reversed())
                 .toList();
     }
