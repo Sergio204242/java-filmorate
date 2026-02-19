@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({FilmDbStorage.class, UserDbStorage.class, FilmRowMapper.class, GenreRowMapper.class, MpaRowMapper.class,
-        UserRowMapper.class})
+        UserRowMapper.class, FilmExtractor.class})
 class FilmorateApplicationTests {
 
     private final UserStorage userStorage;
