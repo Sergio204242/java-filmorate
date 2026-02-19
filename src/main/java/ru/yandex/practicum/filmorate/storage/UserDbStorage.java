@@ -1,8 +1,9 @@
 package ru.yandex.practicum.filmorate.storage;
 
 import jakarta.validation.ValidationException;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
@@ -13,21 +14,17 @@ import ru.yandex.practicum.filmorate.model.dto.UserDto;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 @Repository
+@RequiredArgsConstructor
 public class UserDbStorage implements UserStorage {
 
-    JdbcTemplate jdbcTemplate;
-    UserRowMapper userRowMapper;
-
-    @Autowired
-    public UserDbStorage(JdbcTemplate jdbcTemplate, UserRowMapper userRowMapper) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.userRowMapper = userRowMapper;
-    }
+    private final JdbcTemplate jdbcTemplate;
+    private final UserRowMapper userRowMapper;
 
     @Override
     public UserDto create(User user) {
@@ -67,12 +64,23 @@ public class UserDbStorage implements UserStorage {
 
         jdbcTemplate.update("DELETE FROM friends WHERE user_id = ?", user.getId());
 
-        if (user.getFriends() != null && !user.getFriends().isEmpty()) {
-            for (Integer friendId : user.getFriends()) {
-                jdbcTemplate.update("INSERT INTO friends (user_id, friend_id) VALUES (?, ?)",
-                        user.getId(), friendId);
+        List<Integer> friendIds = new ArrayList<>(user.getFriends());
+
+        String insertSql = "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)";
+
+        jdbcTemplate.batchUpdate(insertSql, new BatchPreparedStatementSetter() {
+
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, user.getId());
+                ps.setInt(2, friendIds.get(i));
             }
-        }
+
+            @Override
+            public int getBatchSize() {
+                return friendIds.size();
+            }
+        });
 
         return getUserById(user.getId());
     }

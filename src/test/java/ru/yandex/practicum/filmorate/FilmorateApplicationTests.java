@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({FilmDbStorage.class, UserDbStorage.class, FilmRowMapper.class, GenreRowMapper.class, MpaRowMapper.class,
         UserRowMapper.class})
-
 class FilmorateApplicationTests {
 
     private final UserStorage userStorage;
